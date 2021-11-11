@@ -1,5 +1,45 @@
 # yolov4_tiny
 
+.
+├── cocoapi  
+│   ├── coco_eval.py  
+│   ├── coco_utils.py  
+├── config  
+│   ├── config.py  
+├── datas   
+│   ├── 2007_train.txt   
+│   ├── 2007_val.txt   
+│   ├── robot_classes.txt   
+│   ├── voc_classes.txt   
+│   └── yolov4_tiny_weights_coco.pth   
+├── demo.py   
+├── detection.py   
+├── model   
+│   ├── CSPdarknet53_tiny.py   
+│   ├── layers.py  
+│   └── yolov4_tiny.py   
+├── readme.md  
+├── scripts  
+│   ├── get_map.py  
+│   ├── kmeans_for_anchors.py  
+│   └── voc_annotation.py  
+├── train.py  
+├── utils  
+│   ├── coco_utils.py  
+│   ├── datasets.py  
+│   ├── __init__.py  
+│   ├── model_trainer.py  
+│   ├── utils_bbox.py  
+│   ├── utils_map.py  
+│   ├── utils.py  
+│   └── yololoss.py  
+└── VOCdevkit  
+    └── VOC2007 -> /home/zhanggong/disk/Elements/data/robot/VOC2007    
+
+
+
+
+
 目前已经完成以下工作：
 
 1. 基本的dataset类，目前还没有做数据增强。
