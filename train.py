@@ -60,37 +60,63 @@ if __name__ == '__main__':
     # 记录训练所采用的模型、损失函数、优化器、配置参数cfg
     logger.info("cfg:\n{}\n loss_f:\n{}\n scheduler:\n{}\n optimizer:\n{}\n model:\n{}".format(
         cfg, loss_fn, scheduler, optimizer, model))
-
+    MAP = []
+    train_loss_utils = []
+    valid_loss_utils = []
     for epoch in range(cfg.start_epoch,cfg.end_epoch):
         avg_loss = ModelTrainer.train(model,loss_fn,optimizer,epoch,cfg.end_epoch,epoch_step,train_loader,device)
-        cocoeval =ModelTrainer.valid(model,epoch,cfg.end_epoch,epoch_step_val,valid_loader,device,cfg)
-        MAP05 = cocoeval.coco_eval['bbox'].stats[1]
-        logger.info(f"Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = {cocoeval.coco_eval['bbox'].stats[0]} \n"
-                    f"Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = {cocoeval.coco_eval['bbox'].stats[1]} \n"
-                    f"Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = {cocoeval.coco_eval['bbox'].stats[2]} \n"
-                    f"Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = {cocoeval.coco_eval['bbox'].stats[3]} \n"
-                    f"Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = {cocoeval.coco_eval['bbox'].stats[4]} \n"
-                    f"Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = {cocoeval.coco_eval['bbox'].stats[5]} \n"
-                    f"Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = {cocoeval.coco_eval['bbox'].stats[6]} \n"
-                    f"Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = {cocoeval.coco_eval['bbox'].stats[7]} \n"
-                    f"Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = {cocoeval.coco_eval['bbox'].stats[8]} \n"
-                    f"Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = {cocoeval.coco_eval['bbox'].stats[9]} \n"
-                    f"Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = {cocoeval.coco_eval['bbox'].stats[10]} \n"
-                    f"Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = {cocoeval.coco_eval['bbox'].stats[11]} \n" )
-        logger.info(f"Epoch[{epoch + 1:0>3}/{cfg.end_epoch}] "
-                    f"Train loss:{avg_loss:.4f} Valid MAP0.5{MAP05:.4f}"
-                    f"LR:{optimizer.param_groups[0]['lr']}")
-        if cfg.best_MAP<MAP05:
-            cfg.best_MAP=MAP05
-            cfg.best_epoch = epoch
-            torch.save(model.state_dict(),f'{cfg.weights_path}/best.pth')
-        checkpoint = {
-            "net": model.state_dict(),
-            'optimizer': optimizer.state_dict(),
-            "epoch": epoch,
-            "map":MAP05
-        }
-        torch.save(checkpoint,f'{cfg.weights_path}/last.pth')
-        logger.info(
-            f"{datetime.strftime(datetime.now(), '%m-%d_%H-%M')} done, best loss: {cfg.best_MAP:.4f} in :{cfg.best_epoch} epoch")
+        if epoch>=cfg.eval_epoch:
+            cocoeval =ModelTrainer.valid_map(model,epoch,cfg.end_epoch,epoch_step_val,valid_loader,device,cfg)
+            MAP05 = cocoeval.coco_eval['bbox'].stats[1]
+            MAP.append(MAP05)
+            logger.info(f"Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = {cocoeval.coco_eval['bbox'].stats[0]} \n"
+                        f"Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = {cocoeval.coco_eval['bbox'].stats[1]} \n"
+                        f"Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = {cocoeval.coco_eval['bbox'].stats[2]} \n"
+                        f"Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = {cocoeval.coco_eval['bbox'].stats[3]} \n"
+                        f"Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = {cocoeval.coco_eval['bbox'].stats[4]} \n"
+                        f"Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = {cocoeval.coco_eval['bbox'].stats[5]} \n"
+                        f"Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = {cocoeval.coco_eval['bbox'].stats[6]} \n"
+                        f"Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = {cocoeval.coco_eval['bbox'].stats[7]} \n"
+                        f"Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = {cocoeval.coco_eval['bbox'].stats[8]} \n"
+                        f"Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = {cocoeval.coco_eval['bbox'].stats[9]} \n"
+                        f"Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = {cocoeval.coco_eval['bbox'].stats[10]} \n"
+                        f"Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = {cocoeval.coco_eval['bbox'].stats[11]} \n" )
+            logger.info(f"Epoch[{epoch + 1:0>3}/{cfg.end_epoch}] "
+                        f"Train loss:{avg_loss:.4f} Valid MAP0.5{MAP05:.4f}"
+                        f"LR:{optimizer.param_groups[0]['lr']}")
+            if cfg.best_MAP<MAP05:
+                cfg.best_MAP=MAP05
+                cfg.best_epoch = epoch
+                torch.save(model.state_dict(),f'{cfg.weights_path}/best.pth')
+            checkpoint = {
+                "net": model.state_dict(),
+                'optimizer': optimizer.state_dict(),
+                "epoch": epoch,
+                "map":MAP05
+            }
+            torch.save(checkpoint,f'{cfg.weights_path}/last.pth')
+            logger.info(
+                f"{datetime.strftime(datetime.now(), '%m-%d_%H-%M')} done, best MAP0.5: {cfg.best_MAP:.4f} in :{cfg.best_epoch} epoch")
+        else:
+            valid_loss = ModelTrainer.valid_loss(model, loss_fn, epoch, cfg.end_epoch, epoch_step_val, valid_loader, device, cfg)
+            valid_loss_utils.append(valid_loss)
+            if cfg.best_loss>valid_loss:
+                cfg.best_loss=valid_loss
+                cfg.best_epoch = epoch
+                torch.save(model.state_dict(),f'{cfg.weights_path}/best.pth')
+            checkpoint = {
+                "net": model.state_dict(),
+                'optimizer': optimizer.state_dict(),
+                "epoch": epoch,
+            }
+            torch.save(checkpoint,f'{cfg.weights_path}/last.pth')
+            logger.info(
+                f"{datetime.strftime(datetime.now(), '%m-%d_%H-%M')} done, best loss: {cfg.best_loss:.4f} in :{cfg.best_epoch} epoch")
+
+    plt.plot(range(0,cfg.eval_epoch),valid_loss_utils,label='loss')
+    plt.plot(range(cfg.eval_epoch,cfg.end_epoch), MAP, label='map')
+    plt.legend()
+    plt.show()
+
+
 
