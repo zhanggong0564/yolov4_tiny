@@ -9,14 +9,21 @@ cfg = EasyDict()
 
 cfg.train_dir = "./datas/2007_train.txt"
 cfg.val_dir = "./datas/2007_val.txt"
-cfg.pretrained = 'datas/yolov4_tiny_weights_coco.pth'
+# cfg.pretrained = 'datas/yolov4_tiny_weights_coco.pth'
+cfg.pretrained = None
+cfg.num_classes = 4
+
 cfg.use_multi_gpu = True
 cfg.input_shape = (416, 416)
-cfg.num_workers =0
+cfg.num_workers =4
 cfg.start_epoch = 0
 cfg.end_epoch = 100
 cfg.best_MAP = 0
-cfg.num_classes = 3
+cfg.best_loss =10
+
+
+cfg.eval_epoch = 50
+
 cfg.num_anchors = 3
 cfg.best_epoch = 0
 cfg.decode = DecodeBox(np.array([[10., 14.],

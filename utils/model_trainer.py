@@ -67,7 +67,7 @@ class ModelTrainer(object):
 
     @staticmethod
     @torch.no_grad()
-    def valid(model, epoch,Epoch, epoch_step_val,dataloader, device,cfg):
+    def valid_map(model, epoch,Epoch, epoch_step_val,dataloader, device,cfg):
         coco = get_coco_api_from_dataset(dataloader.dataset)
         iou_types = ["bbox"]  # iou_types = ["bbox"]
         coco_evaluator = CocoEvaluator(coco, iou_types)
@@ -86,3 +86,35 @@ class ModelTrainer(object):
             coco_evaluator.summarize()
 
         return coco_evaluator
+    @staticmethod
+    @torch.no_grad()
+    def valid_loss(model,yolo_loss,epoch,Epoch, epoch_step_val,dataloader, device,cfg):
+        loss = 0
+        model.eval()
+        with tqdm(total=epoch_step_val, desc=f'Epoch {epoch + 1}/{Epoch}', postfix=dict, mininterval=0.3) as pbar:
+            for iteration, batch in enumerate(dataloader):
+                if iteration >= epoch_step_val:
+                    break
+                with torch.no_grad():
+                    images, targets = batch[0], batch[1]
+                    images = images.to(device)
+                    targets = [torch.from_numpy(ann).to(device).to(torch.float32) for ann in targets]
+                    # ----------------------#
+                    #   前向传播
+                    # ----------------------#
+                    outputs = model(images)
+                loss_value_all = 0
+                num_pos_all = 0
+                # ----------------------#
+                #   计算损失
+                # ----------------------#
+                for l in range(len(outputs)):
+                    loss_item, num_pos = yolo_loss(l, outputs[l], targets)
+                    loss_value_all += loss_item
+                    num_pos_all += num_pos
+                loss_value = loss_value_all / num_pos_all
+                loss += loss_value.item()
+
+                pbar.set_postfix(**{'loss': loss / (iteration + 1)})
+                pbar.update(1)
+        return loss / epoch_step_val
