@@ -1,6 +1,7 @@
 import os
 import random
 import xml.etree.ElementTree as ET
+import numpy as np
 
 #--------------------------------------------------------------------------------------------------------------------------------#
 #   annotation_mode用于指定该文件运行时计算的内容
@@ -16,7 +17,7 @@ annotation_mode     = 0
 #   那么就是因为classes没有设定正确
 #   仅在annotation_mode为0和2的时候有效
 #-------------------------------------------------------------------#
-classes_path        = '../datas/robot_classes.txt'
+classes_path        = '../datas/fruit_classes.txt'
 #--------------------------------------------------------------------------------------------------------------------------------#
 #   trainval_percent用于指定(训练集+验证集)与测试集的比例，默认情况下 (训练集+验证集):测试集 = 9:1
 #   train_percent用于指定(训练集+验证集)中训练集与验证集的比例，默认情况下 训练集:验证集 = 9:1
@@ -47,7 +48,8 @@ def convert_annotation(year, image_id, list_file):
     in_file = open(os.path.join(VOCdevkit_path, 'VOC%s/Annotations/%s.xml'%(year, image_id)), encoding='utf-8')
     tree=ET.parse(in_file)
     root = tree.getroot()
-
+    width = root.find('size').find('width').text
+    height = root.find('size').find('height').text
     for obj in root.iter('object'):
         difficult = 0 
         if obj.find('difficult')!=None:
@@ -57,7 +59,12 @@ def convert_annotation(year, image_id, list_file):
             continue
         cls_id = classes.index(cls)
         xmlbox = obj.find('bndbox')
-        b = (int(float(xmlbox.find('xmin').text)), int(float(xmlbox.find('ymin').text)), int(float(xmlbox.find('xmax').text)), int(float(xmlbox.find('ymax').text)))
+        #防止框超出范围
+        xmin = np.clip(int(float(xmlbox.find('xmin').text)),0,width)
+        ymin = np.clip(int(float(xmlbox.find('ymin').text)),0,height)
+        xmax = np.clip(int(float(xmlbox.find('xmax').text)),0,width)
+        ymax = np.clip(int(float(xmlbox.find('ymax').text)),0,height)
+        b = (xmin, ymin, xmax, ymax)
         list_file.write(" " + ",".join([str(a) for a in b]) + ',' + str(cls_id))
         
 if __name__ == "__main__":
