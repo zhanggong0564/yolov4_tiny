@@ -26,7 +26,7 @@ if __name__ == '__main__':
     valid_datasets = CustumDateset(cfg.val_dir,cfg.input_shape,transform=cfg.valid_ts)
 
     train_loader =DataLoader(dataset=train_datasets,batch_size=args.bs,shuffle=True,num_workers=cfg.num_workers,collate_fn=yolo_dataset_collate)
-    valid_loader = DataLoader(dataset=valid_datasets, batch_size=args.bs, num_workers=cfg.num_workers,collate_fn=yolo_dataset_collate)
+    valid_loader = DataLoader(dataset=valid_datasets, batch_size=args.bs,shuffle=False,num_workers=cfg.num_workers,collate_fn=yolo_dataset_collate)
 
     #model
     model = Yolov4Tiny(cfg.num_classes,cfg.num_anchors)
@@ -54,7 +54,7 @@ if __name__ == '__main__':
         checkpoint = torch.load(args.resume)
         model.load_state_dict(checkpoint['net'])  # 加载模型可学习参数
         optimizer.load_state_dict(checkpoint['optimizer'])  # 加载优化器参数
-        cfg.start_epoch = checkpoint['epoch']  # 设置开始的epoch
+        cfg.start_epoch = checkpoint['epoch']+1  # 设置开始的epoch
         logger.info(f"start resume mode load from {cfg.start_epoch} epoch")
 
     # 记录训练所采用的模型、损失函数、优化器、配置参数cfg
