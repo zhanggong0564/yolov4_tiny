@@ -167,6 +167,7 @@ class DecodeBox():
             class_conf = class_conf[conf_mask]
             class_pred = class_pred[conf_mask]
             if not image_pred.size(0):
+                output[i] = []
                 continue
             #-------------------------------------------------------------------------#
             #   detections  [num_anchors, 7]

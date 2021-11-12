@@ -93,14 +93,19 @@ def evaluate(inputs,device,model,decode,num_classes,model_input_shape):
     # results = {'boxes':0,'classes':0,'conf':0}
     res ={}
     for i in range(len(results)):
-        bb = torch.tensor(results[i][...,:4],requires_grad=False)
-        boxes = torch.full_like(bb,0)
-        boxes[...,0] = bb[...,1]
-        boxes[..., 1] = bb[..., 0]
-        boxes[..., 2] = bb[..., 3]
-        boxes[..., 3] = bb[..., 2]
-        labels = torch.tensor(results[i][...,6],requires_grad=False)
-        scores = torch.tensor(results[i][...,4]*results[i][...,5],requires_grad=False)
+        if results[i]==[]:
+            boxes = torch.tensor([]).resize(0,4)
+            labels =torch.tensor([]).resize(0,4)
+            scores = torch.tensor([]).resize(0,4)
+        else:
+            bb = torch.tensor(results[i][...,:4],requires_grad=False)
+            boxes = torch.full_like(bb,0)
+            boxes[...,0] = bb[...,1]
+            boxes[..., 1] = bb[..., 0]
+            boxes[..., 2] = bb[..., 3]
+            boxes[..., 3] = bb[..., 2]
+            labels = torch.tensor(results[i][...,6],requires_grad=False)
+            scores = torch.tensor(results[i][...,4]*results[i][...,5],requires_grad=False)
         coco_resluts = {
             'boxes':boxes,
             'labels':labels,
