@@ -8,6 +8,8 @@ from albumentations.pytorch import ToTensorV2
 # from utils.dataaugment import get_transform
 # from imp import reload
 # reload(utils)
+from utils.mosico import get_mosico_random_data
+import random
 
 
 
@@ -15,25 +17,38 @@ class CustumDateset(Dataset):
     def __init__(self,annotation_lines_txt,input_shape,transform=None,mode='train',check=False):
         super(CustumDateset, self).__init__()
         self.annotation_lines_txt =annotation_lines_txt
-        self.annotation_info = self.process_annotation_lines_txt()[:1000]
+        self.annotation_info = self.process_annotation_lines_txt()
         self.transform = transform
         self.input_shape = input_shape
         self.check =check
+        self.use_mosico = True
+        self.mode =mode
         pass
 
     def __len__(self):
         return len(self.annotation_info)
 
     def __getitem__(self, index):
-        line_infos = self.annotation_info[index].split()
-        image_path = line_infos[0]
-        boxes_info = line_infos[1:]
-        boxes = np.array([list(map(int,box.split(','))) for box in boxes_info])
-        src_image = cv2.imread(image_path)
-        h,w,c = src_image.shape
-        image = cv2.cvtColor(src_image, cv2.COLOR_BGR2RGB)
-        image_id = torch.tensor([index])
+        rand_mixup = random.choice([0, 1,2,3]) == 0
+        if self.use_mosico and rand_mixup and self.mode=='train':
+            mosico_index = np.random.choice(range(len(self.annotation_info)), 3).tolist()
+            mosico_index.append(index)
+            src_image, new_boxes = get_mosico_random_data(self.annotation_info,mosico_index,self.input_shape)
+            h, w, c = src_image.shape
+            image =src_image
+            boxes = new_boxes
+            if boxes.tolist()==[]:
+                return 0,np.array([]),0,0,0
+        else:
+            line_infos = self.annotation_info[index].split()
+            image_path = line_infos[0]
+            boxes_info = line_infos[1:]
+            boxes = np.array([list(map(int,box.split(','))) for box in boxes_info])
+            src_image = cv2.imread(image_path)
+            h,w,c = src_image.shape
+            image = cv2.cvtColor(src_image, cv2.COLOR_BGR2RGB)
 
+        image_id = torch.tensor([index])
         target_boxes = boxes[...,:4]
         target_labels = boxes[...,4]
         iscrowd = torch.zeros((len(boxes),), dtype=torch.int64)
@@ -87,6 +102,8 @@ def yolo_dataset_collate(batch):
     targets =[]
     image_shape = (0,0)
     for img, box,image_shape,src_image,target in batch:
+        if box.tolist()==[]:
+            continue
         images.append(img)
         bboxes.append(box)
         targets.append(target)

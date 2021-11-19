@@ -7,10 +7,12 @@ from utils.utils import get_lr
 from cocoapi.coco_utils import get_coco_api_from_dataset
 from cocoapi.coco_eval import CocoEvaluator
 from utils.utils import evaluate
+from utils.mixup import mix_up
+import random
 
 class ModelTrainer(object):
     @staticmethod
-    def train(model, yolo_loss, optimizer, epoch, Epoch,epoch_step, dataloader, device):
+    def train(model, yolo_loss, optimizer, epoch, Epoch,epoch_step, dataloader, device,cfg):
         '''
         :param model: yolomodel
         :param yolo_loss:
@@ -32,6 +34,9 @@ class ModelTrainer(object):
                 images, targets = batch[0], batch[1]
                 images = images.to(device)
                 targets = [torch.from_numpy(ann).to(device).to(torch.float32) for ann in targets]
+                rand_mixup = random.choice([0, 1, 2]) == 0 #设置随机mixup
+                if cfg.use_mixup and rand_mixup:
+                    images,label_a,label_b,lam =mix_up(images,targets)
                 # ----------------------#
                 #   清零梯度
                 # ----------------------#
@@ -46,6 +51,14 @@ class ModelTrainer(object):
                 # ----------------------#
                 #   计算损失
                 # ----------------------#
+                if cfg.use_mixup and rand_mixup:
+                    for l in range(len(outputs)):
+                        loss_item_a, num_pos = yolo_loss(l, outputs[l], label_a)
+                        loss_item_b, num_pos = yolo_loss(l, outputs[l], label_b)
+                        loss_item = lam*loss_item_a+(1-lam)*loss_item_b
+                        loss_value_all += loss_item
+                        num_pos_all += num_pos
+
                 for l in range(len(outputs)):
                     loss_item, num_pos = yolo_loss(l, outputs[l], targets)
                     loss_value_all += loss_item

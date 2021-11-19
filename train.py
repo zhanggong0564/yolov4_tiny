@@ -23,7 +23,7 @@ if __name__ == '__main__':
     logger, log_dir = make_logger(cfg.exp_log,console_handler=False)
     #1 dataloder
     train_datasets = CustumDateset(cfg.train_dir,cfg.input_shape,transform=cfg.train_ts)
-    valid_datasets = CustumDateset(cfg.val_dir,cfg.input_shape,transform=cfg.valid_ts)
+    valid_datasets = CustumDateset(cfg.val_dir,cfg.input_shape,transform=cfg.valid_ts,mode='val')
 
     train_loader =DataLoader(dataset=train_datasets,batch_size=args.bs,shuffle=True,num_workers=cfg.num_workers,collate_fn=yolo_dataset_collate)
     valid_loader = DataLoader(dataset=valid_datasets, batch_size=args.bs,shuffle=False,num_workers=cfg.num_workers,collate_fn=yolo_dataset_collate)
@@ -32,6 +32,7 @@ if __name__ == '__main__':
     model = Yolov4Tiny(cfg.num_classes,cfg.num_anchors)
 
     if cfg.pretrained and not args.resume:
+        print("load pretrain model")
         model_dict = model.state_dict()
         pretrained_dict = torch.load(cfg.pretrained)
         pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
@@ -42,10 +43,12 @@ if __name__ == '__main__':
     model.to(device)
 
 
-    optimizer = torch.optim.Adam(model.parameters(), args.lr, weight_decay=5e-4)
-    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, gamma=0.1, milestones=[5,10])
+    # optimizer = torch.optim.Adam(model.parameters(), args.lr, weight_decay=1e-4)
+    optimizer = torch.optim.SGD(model.parameters(),args.lr,momentum=0.9,weight_decay=1e-4)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=5, eta_min=1e-5)
+    # scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, gamma=cfg.factor, milestones=cfg.milestones)
 
-    loss_fn = YOLOLoss(cfg.anchors,cfg.num_classes,input_shape=cfg.input_shape,cuda=True,anchors_mask=cfg.anchors_mask)
+    loss_fn = YOLOLoss(cfg.anchors,cfg.num_classes,input_shape=cfg.input_shape,cuda=True,anchors_mask=cfg.anchors_mask,label_smoothing=cfg.label_smoothing)
 
     epoch_step = len(train_datasets) //args.bs
     epoch_step_val = len(valid_datasets) // args.bs
@@ -64,7 +67,7 @@ if __name__ == '__main__':
     train_loss_utils = []
     valid_loss_utils = []
     for epoch in range(cfg.start_epoch,cfg.end_epoch):
-        avg_loss = ModelTrainer.train(model,loss_fn,optimizer,epoch,cfg.end_epoch,epoch_step,train_loader,device)
+        avg_loss = ModelTrainer.train(model,loss_fn,optimizer,epoch,cfg.end_epoch,epoch_step,train_loader,device,cfg)
         if epoch>=cfg.eval_epoch:
             cocoeval =ModelTrainer.valid_map(model,epoch,cfg.end_epoch,epoch_step_val,valid_loader,device,cfg)
             MAP05 = cocoeval.coco_eval['bbox'].stats[1]
@@ -112,7 +115,7 @@ if __name__ == '__main__':
             torch.save(checkpoint,f'{cfg.weights_path}/last.pth')
             logger.info(
                 f"{datetime.strftime(datetime.now(), '%m-%d_%H-%M')} done, best loss: {cfg.best_loss:.4f} in :{cfg.best_epoch} epoch")
-
+        scheduler.step()
     plt.plot(range(0,cfg.eval_epoch),valid_loss_utils,label='loss')
     plt.plot(range(cfg.eval_epoch,cfg.end_epoch), MAP, label='map')
     plt.legend()

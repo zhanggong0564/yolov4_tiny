@@ -1,10 +1,10 @@
 import os
 import xml.etree.ElementTree as ET
 
-from PIL import Image
+import cv2
 from tqdm import tqdm
 
-from yolo import YOLO
+from detection import Detction
 from utils.utils import get_classes
 from utils.utils_map import get_coco_map, get_map
 
@@ -29,7 +29,7 @@ if __name__ == "__main__":
     #   此处的classes_path用于指定需要测量VOC_map的类别
     #   一般情况下与训练和预测所用的classes_path一致即可
     #-------------------------------------------------------#
-    classes_path    = 'model_data/voc_classes.txt'
+    classes_path    = '../datas/fruit_classes.txt'
     #-------------------------------------------------------#
     #   MINOVERLAP用于指定想要获得的mAP0.x
     #   比如计算mAP0.75，可以设定MINOVERLAP = 0.75。
@@ -43,11 +43,11 @@ if __name__ == "__main__":
     #   指向VOC数据集所在的文件夹
     #   默认指向根目录下的VOC数据集
     #-------------------------------------------------------#
-    VOCdevkit_path  = 'VOCdevkit'
+    VOCdevkit_path  = '../VOCdevkit'
     #-------------------------------------------------------#
     #   结果输出的文件夹，默认为map_out
     #-------------------------------------------------------#
-    map_out_path    = 'map_out'
+    map_out_path    = '../map_out'
 
     image_ids = open(os.path.join(VOCdevkit_path, "VOC2007/ImageSets/Main/test.txt")).read().strip().split()
 
@@ -64,13 +64,13 @@ if __name__ == "__main__":
 
     if map_mode == 0 or map_mode == 1:
         print("Load model.")
-        yolo = YOLO(confidence = 0.001, nms_iou = 0.5)
+        yolo = Detction(4,'../../logs/best.pth',conf=0.001)
         print("Load model done.")
 
         print("Get predict result.")
         for image_id in tqdm(image_ids):
             image_path  = os.path.join(VOCdevkit_path, "VOC2007/JPEGImages/"+image_id+".jpg")
-            image       = Image.open(image_path)
+            image       = cv2.imread(image_path)
             if map_vis:
                 image.save(os.path.join(map_out_path, "images-optional/" + image_id + ".jpg"))
             yolo.get_map_txt(image_id, image, class_names, map_out_path)

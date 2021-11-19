@@ -2,8 +2,8 @@ from detection import Detction
 import cv2
 
 if __name__ == '__main__':
-    det = Detction(3,'../logs/best.pth')
-    image = cv2.imread('/home/zhanggong/disk/Extern/workspace/yolov4_tiny_ws/yolov4_tiny/VOCdevkit/VOC2007/JPEGImages/011.jpg')
+    det = Detction(4,'../logs/best.pth')
+    image = cv2.imread('/home/zhanggong/disk/Extern/workspace/yolov4_tiny_ws/yolov4_tiny/VOCdevkit/VOC2007/JPEGImages/037.jpg')
 
     outputs = det.detect(image)[0]
     for out in outputs:
